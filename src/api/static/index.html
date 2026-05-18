@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Activity Recognition</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --surface: #1a1d24;
+    --surface-2: #232730;
+    --border: #2d3340;
+    --text: #e8eaed;
+    --text-dim: #9aa0a6;
+    --accent: #7c9eff;
+    --accent-hover: #5a82ff;
+    --success: #34d399;
+    --error: #f87171;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .container {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+  }
+  header { margin-bottom: 2rem; }
+  h1 {
+    font-size: 1.75rem;
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+  }
+  .subtitle {
+    color: var(--text-dim);
+    margin: 0;
+    font-size: 0.95rem;
+  }
+  .links {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+  }
+  .links a {
+    color: var(--accent);
+    text-decoration: none;
+    margin-right: 1rem;
+  }
+  .links a:hover { text-decoration: underline; }
+
+  .result {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+  .result.active {
+    border-color: var(--success);
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(52, 211, 153, 0.08) 100%);
+  }
+  .result.error {
+    border-color: var(--error);
+  }
+  .result-label {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+  .result-activity {
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  .result-activity .emoji {
+    margin-right: 0.5rem;
+  }
+  .result-meta {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+  }
+
+  form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+  }
+  fieldset {
+    border: none;
+    padding: 0;
+    margin: 0 0 1.5rem;
+  }
+  legend {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+    padding: 0;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+  }
+  .field { display: flex; flex-direction: column; }
+  .field label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-bottom: 0.25rem;
+    font-family: ui-monospace, monospace;
+  }
+  .field input {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-family: ui-monospace, monospace;
+    transition: border-color 0.15s;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+  button {
+    padding: 0.7rem 1.25rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-family: inherit;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    flex: 1;
+    min-width: 140px;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-secondary {
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--border); }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 1.4rem; }
+    .result-activity { font-size: 2rem; }
+    .container { padding: 1.25rem 1rem 2rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Activity Recognition</h1>
+    <p class="subtitle">
+      Classify human activity from smartphone sensor data using a Random Forest model trained on 18,000 balanced samples (98.4% F1).
+    </p>
+    <div class="links">
+      <a href="/docs">API docs</a>
+      <a href="/health">Health</a>
+      <a href="/info">Service info</a>
+      <a href="https://github.com/timadeg/activity-context-recognition" target="_blank">GitHub</a>
+    </div>
+  </header>
+
+  <div class="result" id="result">
+    <div class="result-label">Predicted activity</div>
+    <p class="result-activity" id="resultActivity">
+      <span class="emoji">⚪</span><span>Awaiting input</span>
+    </p>
+    <div class="result-meta" id="resultMeta">Fill the form and click Predict.</div>
+  </div>
+
+  <form id="predictForm">
+    <fieldset>
+      <legend>Orientation</legend>
+      <div class="grid">
+        <div class="field"><label for="orX">orX</label><input id="orX" type="number" step="any" value="127" required></div>
+        <div class="field"><label for="orY">orY</label><input id="orY" type="number" step="any" value="-17" required></div>
+        <div class="field"><label for="orZ">orZ</label><input id="orZ" type="number" step="any" value="2" required></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Rotation</legend>
+      <div class="grid">
+        <div class="field"><label for="rX">rX</label><input id="rX" type="number" step="any" value="0.071" required></div>
+        <div class="field"><label for="rY">rY</label><input id="rY" type="number" step="any" value="-0.132" required></div>
+        <div class="field"><label for="rZ">rZ</label><input id="rZ" type="number" step="any" value="-0.878" required></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Accelerometer</legend>
+      <div class="grid">
+        <div class="field"><label for="accX">accX</label><input id="accX" type="number" step="any" value="-0.038" required></div>
+        <div class="field"><label for="accY">accY</label><input id="accY" type="number" step="any" value="2.682" required></div>
+        <div class="field"><label for="accZ">accZ</label><input id="accZ" type="number" step="any" value="8.657" required></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Gravity</legend>
+      <div class="grid">
+        <div class="field"><label for="gX">gX</label><input id="gX" type="number" step="any" value="-0.041" required></div>
+        <div class="field"><label for="gY">gY</label><input id="gY" type="number" step="any" value="2.677" required></div>
+        <div class="field"><label for="gZ">gZ</label><input id="gZ" type="number" step="any" value="8.643" required></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Magnetometer</legend>
+      <div class="grid">
+        <div class="field"><label for="mX">mX</label><input id="mX" type="number" step="any" value="-31.2" required></div>
+        <div class="field"><label for="mY">mY</label><input id="mY" type="number" step="any" value="-35.6" required></div>
+        <div class="field"><label for="mZ">mZ</label><input id="mZ" type="number" step="any" value="-37.6" required></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Ambient</legend>
+      <div class="grid">
+        <div class="field"><label for="lux">lux</label><input id="lux" type="number" step="any" value="5000" required></div>
+        <div class="field"><label for="soundLevel">soundLevel</label><input id="soundLevel" type="number" step="any" value="49.56" required></div>
+      </div>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit" class="btn-primary" id="submitBtn">Predict activity</button>
+      <button type="button" class="btn-secondary" id="exampleBtn">Load random example</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  const FIELDS = ["orX","orY","orZ","rX","rY","rZ","accX","accY","accZ","gX","gY","gZ","mX","mY","mZ","lux","soundLevel"];
+
+  const EMOJIS = {
+    Sitting: "🪑", Standing: "🧍", Walking: "🚶", Running: "🏃",
+    Jogging: "🏃‍♂️", Lying: "🛌", Driving: "🚗",
+    AscendingStairs: "🪜", DescendingStairs: "⬇️",
+  };
+
+  const EXAMPLES = [
+    { label: "Sitting", values: [127,-17,2,0.071,-0.132,-0.878,-0.038,2.682,8.657,-0.041,2.677,8.643,-31.2,-35.6,-37.6,5000,49.56] },
+    { label: "Walking", values: [89,-23,15,0.412,-0.221,-0.654,1.234,-0.876,9.234,0.521,1.234,9.124,-28.4,-32.1,-39.2,3200,62.34] },
+    { label: "Running", values: [102,-31,28,0.892,-0.541,-0.421,3.421,-2.123,10.234,1.234,0.876,9.876,-25.6,-30.4,-41.2,4100,71.23] },
+    { label: "Driving", values: [45,12,-8,0.234,0.142,-0.987,0.123,0.234,9.812,0.087,0.123,9.764,-22.1,-28.7,-36.4,1200,58.91] },
+    { label: "Lying", values: [12,-2,89,0.012,-0.001,-0.999,0.012,9.812,0.234,0.008,9.764,0.187,-30.2,-31.4,-32.1,150,38.21] },
+  ];
+
+  const form = document.getElementById("predictForm");
+  const submitBtn = document.getElementById("submitBtn");
+  const exampleBtn = document.getElementById("exampleBtn");
+  const result = document.getElementById("result");
+  const resultActivity = document.getElementById("resultActivity");
+  const resultMeta = document.getElementById("resultMeta");
+
+  function setResult(activity, meta, state) {
+    const emoji = EMOJIS[activity] || "✨";
+    resultActivity.innerHTML = `<span class="emoji">${emoji}</span><span>${activity}</span>`;
+    resultMeta.textContent = meta;
+    result.classList.remove("active", "error");
+    if (state) result.classList.add(state);
+  }
+
+  function getPayload() {
+    const data = {};
+    for (const f of FIELDS) data[f] = parseFloat(document.getElementById(f).value);
+    return data;
+  }
+
+  exampleBtn.addEventListener("click", () => {
+    const ex = EXAMPLES[Math.floor(Math.random() * EXAMPLES.length)];
+    FIELDS.forEach((f, i) => { document.getElementById(f).value = ex.values[i]; });
+    resultMeta.textContent = `Loaded "${ex.label}" example — click Predict to test.`;
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Predicting...";
+    setResult("Working", "Calling /predict...", null);
+
+    try {
+      const res = await fetch("/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(getPayload()),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const detail = err.detail
+          ? (typeof err.detail === "string" ? err.detail : JSON.stringify(err.detail))
+          : `HTTP ${res.status}`;
+        setResult("Error", detail, "error");
+        return;
+      }
+
+      const data = await res.json();
+      setResult(data.activity, `Model: ${data.model_version}`, "active");
+    } catch (err) {
+      setResult("Error", err.message || "Request failed", "error");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Predict activity";
+    }
+  });
+</script>
+</body>
+</html>
