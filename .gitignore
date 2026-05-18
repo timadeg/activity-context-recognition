@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Environment variables
+.env
+.env.local
+
+# Data — keep raw, ignore processed
+data/processed/*
+data/interim/*
+!data/processed/.gitkeep
+!data/interim/.gitkeep
+
+# Models — these get large, push to GCS
+models/*.pkl
+models/*.joblib
+models/*.h5
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# GCP
+*-service-account.json
+key.json
